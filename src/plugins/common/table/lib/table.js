@@ -22,6 +22,7 @@
  */
 define([
 	'aloha',
+	'aloha/ui-classifier',
 	'jquery',
 	'ui/scopes',
 	'ui/dialog',
@@ -31,6 +32,7 @@ define([
 	'table/table-plugin-utils'
 ], function (
 	Aloha,
+	UiClassifier,
 	jQuery,
 	Scopes,
 	Dialog,
@@ -69,11 +71,6 @@ define([
 		 * Attribute holding the jQuery-table-represenation
 		 */
 		obj: undefined,
-
-		/**
-		 * The DOM-element of the outest div-container wrapped around the cell
-		 */
-		tableWrapper: undefined,
 
 		/**
 		 * An array of all Cells contained in the Table
@@ -280,10 +277,17 @@ define([
 		    htmlTableWrapper,
 		    tableWrapper, eventContainer;
 		
-		// alter the table attributes
+		// An activated table gets a special class which is removed on deactivation.
+		// Was already registered with UiContext.registerUiClasses() in table-plugin.js.
 		this.obj.addClass( this.get( 'className' ) );
+
+		// Setting contenteditable to false works around a bug (don't
+		// know what the bug it is about). To make cells editable, a
+		// wrapper is injected into each cell on activation which has
+		// contenteditable=true.
 		this.obj.contentEditable( false );
-		
+		UiClassifier.letUiAttr( this.obj, 'contenteditable' );
+
 		// set an id to the table if not already set
 		if ( this.obj.attr( 'id' ) == '' ) {
 			this.obj.attr( 'id', GENTICS.Utils.guid() );
@@ -307,49 +311,11 @@ define([
 			}
 		} );
 
-		/*
-		We need to make sure that when the user has selected text inside a
-		table cell we do not delete the entire row, before we activate this
-		
-		this.obj.bind( 'keyup', function ( $event ) {
-			if ( $event.keyCode == 46 ) {
-				if ( that.selection.selectedColumnIdxs.length ) {
-					that.deleteColumns();
-					$event.stopPropagation();
-				} else if ( that.selection.selectedRowIdxs.length ) {
-					that.deleteRows();
-					$event.stopPropagation();
-				} else {
-					// Nothing to delete
-				}
-			}
-		} );
-		*/
-		
-		// handle click event of the table
-	//	this.obj.bind('click', function(e){
-	//		// stop bubbling the event to the outer divs, a click in the table
-	//		// should only be handled in the table
-	//		e.stopPropagation();
-	//		return false;
-	//	});
-
 		eventContainer.bind( 'mousedown', function ( jqEvent ) {
 			// focus the table if not already done
 			if ( !that.hasFocus ) {
 				that.focus();
 			}
-
-
-	// DEACTIVATED by Haymo prevents selecting rows
-	//		// if a mousedown is done on the table, just focus the first cell of the table
-	//		setTimeout(function() {
-	//			var firstCell = that.obj.find('tr:nth-child(2) td:nth-child(2)').children('div[contenteditable=true]').get(0);
-	//			TableSelection.unselectCells();
-	//			jQuery(firstCell).get(0).focus();
-	//			// move focus in first cell
-	//			that.obj.cells[0].wrapper.get(0).focus();
-	//		}, 0);
 
 			// stop bubbling and default-behaviour
 			jqEvent.stopPropagation();
@@ -365,10 +331,13 @@ define([
 		tableWrapper = jQuery(
 			'<div class="' + this.get( 'classTableWrapper' ) + '" data-block-skip-scope="true"></div>'
 		);
-		//tableWrapper.contentEditable( false );
+
+		UiClassifier.letUiWrapper( tableWrapper );
 
 		// wrap the tableWrapper around the table
 		this.obj.wrap( tableWrapper );
+		// $.wrap copies the wrapper
+		tableWrapper = this.obj.parent( "." + this.get( 'classTableWrapper' ) );
 
 		// Check because the aloha block plugin may not be loaded
 		var parent = this.obj.parent();
@@ -382,7 +351,7 @@ define([
 		// Disable resize and selection of the controls (only IE)
 		// Events only can be set to elements which are loaded from the DOM (if they
 		// were created dynamically before) ;)
-		 
+
 		htmlTableWrapper = this.obj.parents( '.' + this.get( 'classTableWrapper' ) );
 		htmlTableWrapper.get( 0 ).onresizestart = function ( e ) { return false; };
 		htmlTableWrapper.get( 0 ).oncontrolselect = function ( e ) { return false; };
@@ -464,6 +433,7 @@ define([
 			columnToInsert = emptyCell.clone();
 			columnToInsert.addClass(this.get('classSelectionColumn'));
 			columnToInsert.css('width', this.get('selectionArea') + 'px');
+			UiClassifier.letUiElement( columnToInsert );
 			//rowObj.find('td:first').before(columnToInsert);
 			rowObj.prepend(columnToInsert);			
 			// rowIndex + 1 because an addtional row is still added
@@ -646,6 +616,7 @@ define([
 		var selectionRow = jQuery('<tr>');
 		selectionRow.addClass(this.get('classSelectionRow'));
 		selectionRow.css('height', this.get('selectionArea') + 'px');
+		UiClassifier.letUiElement( selectionRow );
 
 		for (var i = 0; i < numColumns; i++) {
 
@@ -1479,12 +1450,17 @@ define([
 			Cell.deactivate();
 		}
 
-		// remove editable span in caption (if any)
-		this.obj.find('caption div').each(function() {
-			jQuery(this).contents().unwrap();
-		});
+		var classCol = this.get( "classSelectionColumn" );
+		var classRow = this.get( "classSelectionRow" );
+		var tbody = this.obj.children( "tbody" );
+		var table = tbody.length ? tbody : this.obj;
+		var selection = table.children( "tr." + classRow )
+			.add( table.children( "tr" ).children( "td." + classCol ) );
+		var tableWrapper = this.obj.parent( "." + this.get( "classTableWrapper" ) );
+		var captionWrapper = this.obj.children( "caption" ).children( ".aloha-editable-caption" );
+		//TODO-wikidocs: replace the above with stripUI
+		//UiClassifier.stripUi( selection.add( this.obj ).add( tableWrapper ).add( captionWrapper) );
 
-		// better unset ;-) otherwise activate() may think you're activated.
 		this.isActive = false;
 	};
 
@@ -1515,6 +1491,45 @@ define([
 		var rows = this.obj.get( 0 ).rows;
 		//converts the HTMLCollection to a real array
 		return jQuery.makeArray( rows );
+	};
+
+	/**
+	 * Helper method to make the caption editable
+	 * @param caption caption as jQuery object
+	 * @param captionText default text for the caption
+	 */
+	Table.prototype.makeCaptionEditable = function(captionText) {
+		var caption = this.obj.children("caption");
+		var cSpan = caption.children('div').eq(0);
+		if (cSpan.length == 0) {
+			// generate a new div
+			cSpan = jQuery('<div></div>');
+			cSpan.addClass('aloha-editable-caption');
+			UiClassifier.letUiFiller( cSpan );
+
+			if (caption.contents().length > 0) {
+				// when the caption has content, we wrap it with the new div
+				caption.contents().wrap(cSpan);
+			} else {
+				// caption has no content, so insert the default caption text
+				if (captionText) {
+					cSpan.text(captionText);
+				}
+				// and append the div into the caption
+				caption.append(cSpan);
+			}
+		}
+		// make the div editable
+		cSpan.contentEditable(true);
+		cSpan.unbind('mousedown');
+		// focus on click
+		cSpan.bind('mousedown', function(jqEvent) {
+			cSpan.focus();
+			// stop bubble, otherwise the mousedown of the table is called ...
+			jqEvent.preventDefault();
+			jqEvent.stopPropagation();
+			return false;
+		});
 	};
 
 	return Table;

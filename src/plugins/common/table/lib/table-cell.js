@@ -1,6 +1,6 @@
 define(
-['jquery', 'table/table-plugin-utils'],
-function (jQuery, Utils) {
+['jquery', 'aloha/ui-classifier', 'table/table-plugin-utils'],
+function (jQuery, UiClassifier, Utils) {
 	/**
 	 * Constructs a TableCell.
 	 *
@@ -56,6 +56,7 @@ function (jQuery, Utils) {
 
 		wrapper.contentEditable( true );
 		wrapper.addClass( 'aloha-table-cell-editable' );
+		UiClassifier.letUiFiller( wrapper );
 
 		var that = this;
 		
@@ -145,6 +146,14 @@ function (jQuery, Utils) {
 				this.obj.removeAttr('class');
 			}
 		}
+
+		/* TODO-wikidocs: replace the above with an UiClassifier implementation
+		var wrapper = this.obj.children( '.aloha-table-cell-editable' );
+		if (wrapper.length) {
+			UiClassifier.stripUi( wrapper );
+			this.obj.unbind( "click" );
+		}
+		*/
 	}
 
 	/**

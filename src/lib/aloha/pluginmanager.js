@@ -24,7 +24,6 @@
  * provided you include this license notice and a URL through which
  * recipients can access the Corresponding Source.
  */
-// Do not add dependencies that require depend on aloha/core
 define(
 [ 'jquery', 'util/class' ],
 function( jQuery, Class ) {
@@ -121,32 +120,11 @@ function( jQuery, Class ) {
 		},
 
 		/**
-		 * Pass the given jQuery object, which represents an editable to all plugins, so that they can make the content clean (prepare for saving)
-		 * @param obj jQuery object representing an editable
-		 * @return void
-		 * @hide
-		 */
-		makeClean: function(obj) {
-			var i, plugin;
-			// iterate through all registered plugins
-			for ( plugin in this.plugins ) {
-				if ( this.plugins.hasOwnProperty( plugin ) ) {
-					if (Aloha.Log.isDebugEnabled()) {
-						Aloha.Log.debug(this, 'Passing contents of HTML Element with id { ' + obj.attr('id') +
-										' } for cleaning to plugin { ' + plugin + ' }');
-					}
-					this.plugins[plugin].makeClean(obj);
-				}
-			}
-		},
-
-		/**
 		 * Expose a nice name for the Plugin Manager
 		 * @hide
 		 */
 		toString: function() {
 			return 'pluginmanager';
 		}
-		
 	}))();
 });

@@ -26,6 +26,7 @@
  */
 define( [
 	'aloha/core',
+	'aloha/ui-classifier',
 	'util/class',
 	'jquery',
 	'aloha/pluginmanager',
@@ -36,6 +37,7 @@ define( [
 	'aloha/block-jump'
 ], function(
 	Aloha,
+	UiClassifier,
 	Class,
 	jQuery,
 	PluginManager,
@@ -73,6 +75,8 @@ define( [
 	if ( typeof Aloha.settings.contentHandler === 'undefined' ) {
 		Aloha.settings.contentHandler = {};
 	}
+
+	var placeholderClass = 'aloha-placeholder';
 
 	var defaultContentSerializer = function(editableElement){
 		return jQuery(editableElement).html();
@@ -144,6 +148,32 @@ define( [
 
 	
 	/**
+	 * Implements the deprecated functionality of the PluginManager
+	 * which lets plugins implement their own makeClean() method.
+	 *
+	 * @param obj
+	 *        The object to clean of DOM elements and attributes
+	 *        injected purely for presentational purposes.
+	 * @deprecated
+	 *        To be removed once all plugins have been rewritten to use
+	 *        the new functionality provided by registerUiClasses() and
+	 *        stripUi().
+	 */
+	function makeCleanObsolete( obj ) {
+		var i, plugin, plugins = PluginManager.plugins;
+		// iterate through all registered plugins
+		for ( plugin in plugins ) {
+			if ( plugins.hasOwnProperty( plugin ) ) {
+				if (Aloha.Log.isDebugEnabled()) {
+					Aloha.Log.debug(this, "Passing contents of HTML Element with id { " + obj.attr("id") +
+									" } for cleaning to plugin { " + plugin + " }");
+				}
+				plugins[plugin].makeClean(obj);
+			}
+		}
+	}
+
+	/**
 	 * Editable object
 	 * @namespace Aloha
 	 * @class Editable
@@ -213,8 +243,6 @@ define( [
 				 91 : 'Win',          // The left Windows Logo key.
 				 92 : 'Win'           // The right Windows Logo key.
 			};
-
-			this.placeholderClass = 'aloha-placeholder';
 
 			Aloha.registerEditable( this );
 
@@ -523,6 +551,7 @@ define( [
 			if ( jQuery( "." + this.placeholderClass, obj ).length !== 0 ) {
 				return;
 			}
+			UiClassifier.letUiElement(el);
 			jQuery( obj ).append( el.addClass( this.placeholderClass ) );
 			jQuery.each(
 				Aloha.settings.placeholder,
@@ -792,13 +821,12 @@ define( [
 			var cache = editableContentCache[this.getId()];
 
 			if (!cache || raw !== cache.raw) {
-
 				BlockJump.removeZeroWidthTextNodeFix();
-
 				var $clone = this.obj.clone(false);
 				$clone.find( '.aloha-cleanme' ).remove();
 				this.removePlaceholder($clone);
-				PluginManager.makeClean($clone);
+				makeCleanObsolete( $clone );
+				UiClassifier.stripUi( $clone );
 				makeClean($clone);
 				$clone = jQuery('<div>' + ContentHandlerManager.handleContent($clone.html(), {
 					contenthandler: Aloha.settings.contentHandler.getContents,

@@ -29,6 +29,7 @@ define([
 	'jquery',
 	'aloha/plugin',
 	'aloha/pluginmanager',
+	'aloha/ui-classifier',
 	'ui/ui',
 	'ui/scopes',
 	'ui/button',
@@ -46,6 +47,7 @@ define([
 	jQuery,
 	Plugin,
 	PluginManager,
+	UiClassifier,
 	Ui,
 	Scopes,
 	Button,
@@ -87,7 +89,7 @@ define([
 	 * An Array which holds all newly created tables contains DOM-Nodes of
 	 * table-objects
 	 */
-	TablePlugin.TableRegistry = new Array();
+	TablePlugin.TableRegistry = [];
 
 	/**
 	 * Holds the active table-object
@@ -157,6 +159,12 @@ define([
 		// add reference to the create layer object
 		this.createLayer = new CreateLayer( this );
 
+		UiClassifier.registerUiClasses([
+			this.get('className'),
+			this.get('classCellSelected'),
+			'aloha-table-cell_active'
+		]);
+
 		// subscribe for the 'editableActivated' event to activate all tables in the editable
 		Aloha.bind( 'aloha-editable-created', function (event, editable) {
 			var config = that.getEditableConfig(editable.obj);
@@ -167,18 +175,7 @@ define([
 				TablePlugin.setFocusedTable( undefined );
 			} );
 
-			editable.obj.find( 'table' ).each( function () {
-				// only convert tables which are editable
-				if ( that.isEditableTable( this ) &&
-						!TablePlugin.isWithinTable( this ) ) {
-					var table = new Table( this, TablePlugin );
-					table.parentEditable = editable;
-					// table.activate();
-					TablePlugin.TableRegistry.push( table );
-				}
-				
-				TablePlugin.checkForNestedTables( editable.obj );
-			} );
+			registerNewTables( editable );
 		} );
 
 		// initialize the table buttons
@@ -250,8 +247,8 @@ define([
 
 		// subscribe for the 'editableActivated' event to activate all tables in the editable
 		Aloha.bind( 'aloha-editable-activated', function (event, props) {
-			// disable all split / merge buttons
 
+			// disable all split / merge buttons
 			that._splitcellsButton.enable(false);
 			that._mergecellsButton.enable(false);
 			that._splitcellsRowButton.enable(false);
@@ -259,30 +256,9 @@ define([
 			that._splitcellsColumnButton.enable(false);
 			that._mergecellsColumnButton.enable(false);
 
-			props.editable.obj.find('table').each(function () {
-				// shortcut for TableRegistry
-				var tr = TablePlugin.TableRegistry;
-				for (var i = 0; i < tr.length; i++) {
-					if (tr[i].obj.attr('id') == jQuery(this).attr('id')) {
-						// activate the table
-						tr[i].activate();
-						// and continue with the next table tag
-						return true;
-					}
-				}
+			registerNewTables( props.editable );
+			TablePlugin.checkForNestedTables( props.editable.obj );
 
-				// if we come here, we did not find the table in our registry, so we need to create a new one
-				// only convert tables which are editable
-				if ( that.isEditableTable( this ) &&
-						!TablePlugin.isWithinTable( this ) ) {
-					var table = new Table( this, TablePlugin );
-					table.parentEditable = props.editable;
-					table.activate();
-					TablePlugin.TableRegistry.push( table );
-				}
-				
-				TablePlugin.checkForNestedTables( props.editable.obj );
-			});
 		});
 
 		// subscribe for the 'editableDeactivated' event to deactivate all tables in the editable
@@ -302,19 +278,7 @@ define([
 		
 		Aloha.bind( 'aloha-smart-content-changed', function ( event ) {
 			if ( Aloha.activeEditable ) {
-				Aloha.activeEditable.obj.find( 'table' ).each( function () {
-					if ( TablePlugin.indexOfTableInRegistry( this ) == -1 &&
-							!TablePlugin.isWithinTable( this ) ) {
-						this.id = GENTICS.Utils.guid();
-						
-						var table = new Table( this, TablePlugin );
-						table.parentEditable = Aloha.activeEditable;
-						TablePlugin.TableRegistry.push( table );
-						table.activate();
-					}
-					
-					TablePlugin.checkForNestedTables( Aloha.activeEditable.obj );
-				} );
+				registerNewTables( Aloha.activeEditable );
 			}
 		} );
 
@@ -323,6 +287,8 @@ define([
 				that.initSidebar( Aloha.Sidebar.right.show() );  
 			} );
 		}
+
+		initWikidocs();
 	};
 
 	//namespace prefix for this plugin
@@ -973,7 +939,6 @@ define([
 						var c = jQuery('<caption></caption>');
 						that.activeTable.obj.prepend(c);
 						that.makeCaptionEditable(c, captionText);
-
 						// get the editable span within the caption and select it
 						var cDiv = c.find('div').eq(0);
 						var captionContent = cDiv.contents().eq(0);
@@ -1131,7 +1096,7 @@ define([
 
 				TablePlugin.TableRegistry.push( tableObj );
 			}
-			
+
 			TablePlugin.checkForNestedTables( Aloha.activeEditable.obj );
 
 			// The selection starts out in the first cell of the new
@@ -1140,7 +1105,6 @@ define([
 			tableObj.focus();
 			TablePlugin.activeTable.selection.selectionType = 'cell';
 			TablePlugin.updateFloatingMenuScope();
-
 		} else {
 			this.error( 'There is no active Editable where the table can be\
 				inserted!' );
@@ -1397,5 +1361,104 @@ define([
 		}
 	};
 	
+	function registerNewTables( editable ) {
+		editable.obj.find( "table" ).each(function () {
+			var table = TablePlugin.getTableFromRegistry( this );
+			if ( null == table ) {
+				if (   TablePlugin.isEditableTable( this )
+					&& ! TablePlugin.isWithinTable( this ) ) {
+					table = new Table( this, TablePlugin );
+					table.parentEditable = editable;
+					TablePlugin.TableRegistry.push( table );
+				}
+			}
+			if ( null != table && ! table.isActive && editable.isActive ) {
+				table.activate();
+			}
+		});
+	}
+
+	function unregisterTables( editable ) {
+		var registry = TablePlugin.TableRegistry;
+		var numEntries = registry.length;
+		while ( numEntries-- ) {
+			var table = registry[ numEntries ];
+			if ( table.parentEditable === editable ) {
+				if ( table.isActive ) {
+					table.deactivate();
+				}
+				registry.splice( numEntries, 1 );
+			}
+		}
+	}
+
+	/**
+	 * Called during table-plugin initialization to perform wikidocs-plugin specific initialization.
+	 */
+	function initWikidocs() {
+		// Wait until Aloha is ready which ensures all plugins that are to be loaded have been loaded
+		Aloha.ready(function(){
+			// Specialy initialization only needs to be done if the wikidocs-plugin actually is loaded
+			if (Aloha.isPluginLoaded("wikidocs")) {
+				Aloha.require([ 'wikidocs/wikidocs-plugin' ], initWithWikidocs);
+			}
+		});
+	}
+
+	/**
+	 * When Aloha is ready and if (and only if) the wikidocs-plugin was
+	 * loaded, will be invoked with the wikidocs-plugin.
+	 *
+	 * @param Wikidocs
+	 *        The wikdiocs plugin that was loaded by Aloha.
+	 */
+	function initWithWikidocs(Wikidocs) {
+		// Should the table structure be modified, we'll have
+		// to update the internal state to reflect the new structure.
+		// Optimally, there should be no internal state.
+		Wikidocs.bindRemoteChanges(
+			{ withName: [ "table", "th", "td", "tr", "caption" ] },
+			function ( inserted, deleted, editable ) {
+				// We update the internal state by just resetting
+				// everything, although that's not optimal.
+				unregisterTables( editable );
+
+				// Although unregisterTables() will deactivate tables,
+				// we may still have some UI elements floating around if
+				// a table object itself was removed, since the
+				// deactivation code can't re-find the UI elements if
+				// for example the table element itself was
+				// deleted.
+				// TODO: Optimizable with something like a
+				// before-document-changes event so that we could remove
+				// the ui code before the changes are actually applied.
+				removeUiElements( editable );
+
+				registerNewTables( editable );
+			});
+	}
+
+	/**
+	 * Removes table-plugin UI elements from the given editable.
+	 *
+	 * @param editable
+	 *        Only descendants of the given editable will be affected.
+	 */
+	function removeUiElements( editable ) {
+		var remove
+			=   "." + TablePlugin.get( "classSelectionColumn" )
+			+ ", ." + TablePlugin.get( "classSelectionRow" )
+		editable.obj.find( remove ).each(function(){
+			jQuery( this ).remove();
+		});
+		var unwrapChildren
+			= "." + TablePlugin.get( "classTableWrapper" )
+			+ ", .aloha-editable-caption"
+			+ ", .aloha-table-cell-editable";
+		editable.obj.find( unwrapChildren  ).each(function(){
+			jQuery( this ).replaceWith( jQuery( this ).contents() );
+		});
+	}
+
 	return TablePlugin;
 });

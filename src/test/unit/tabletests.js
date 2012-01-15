@@ -67,12 +67,12 @@ function ( TestUtils ) {
 			operation : function ( table ) {}
 		},
 		
-		{ module : 'makeClean' },
+		{ module : 'stripUi' },
 		///////////////////////////////////////////////////////////////////////
 		
 		{
 			exclude   : false,
-			desc      : 'makeClean',
+			desc      : 'Stripping UI elements',
 			start     : '<table class="original"><tbody>\
 							<tr><td>test</td></tr>\
 						 </tbody></table>',
@@ -89,7 +89,7 @@ function ( TestUtils ) {
 					 .addClass( 'clone' )
 					 .removeClass( 'original' );
 				
-				table.tablePlugin.makeClean( clone );
+				UiClassifier.stripUiDeeply( clone );
 				
 				jQuery( '#editable' ).append(
 					'<!-- ' + clone.html()

@@ -35,6 +35,7 @@
 define( [
 	'aloha',
 	'aloha/plugin',
+	'aloha/ui-classifier',
 	'jquery',
 	'ui/port-helper-attribute-field',
 	'ui/ui',
@@ -49,6 +50,7 @@ define( [
 ], function (
 	Aloha,
 	Plugin,
+	UiClassifier,
 	jQuery,
 	AttributeField,
 	Ui,
@@ -166,6 +168,11 @@ define( [
 				this.hrefValue = this.settings.hrefValue;
 			}
 			
+			UiClassifier.registerUiClasses([
+				'aloha-link-pointer',
+				'aloha-link-text'
+			]);
+
 			this.createButtons();
 			this.subscribeEvents();
 			this.bindInteractions();
