@@ -12,7 +12,46 @@ All changes are categorized into one of the following keywords:
                usage, or intent of an existing one.
 - **MANUAL CHANGE**: The change requires changes to existing implementation.
 
+# 0.22.x
+
+## 0.22.0 - 2012/09/03
+
+- **MANUAL CHANGE**: Updated UI CSS regarding button selector.
+
+- **MANUAL CHANGE**: Added a demo of placeholders to boilerplate.
+
+- **FEATURE**: Image Caption Plugin: caption now supports sanitize contenthandler & disable / enable of line breaks;
+	<code>
+	Aloha.settings.contentHandler.handler: {
+		sanitize: {
+			'.aloha-captioned-image-caption': { elements: [ 'em', 'strong' ] }
+		}
+	}
+	</code>
+
+	<code>
+	Aloha.settings.plugins: {
+		captionedImage: {
+			allowLinebreak: [ 'p' ], // ['br', 'p'], true or false (default)
+		}
+	}
+	</code>
+
+- **BUG**: In the sidebar the panel entry for the format plugin was always shown; now when the formatOptions is empty the empty (useless) sidebar panel will be hidden.
+
+- **BUG**: Align Plugin button status was not shown correctly.
+
 # 0.21.x
+
+## 0.21.4 - 2012/09/03
+
+- **ENHANCEMENT**: Added labels to the image-plugin url, title, width, height input fields
+
+	This change also rearranges the order of image-plugin components in the toolbar.
+
+- **BUG**: Fixed the ContentHandlerManager to use the content handlers in the correct order.
+
+- **BUG**: Fixed clicking custom block handles activates the image plugin
 
 ## 0.21.3 - 2012/08/24
 
@@ -500,6 +539,11 @@ All changes are categorized into one of the following keywords:
 
 
 # 0.20.x
+
+## 0.20.23 - 2012/08/24
+
+- **ENHANCEMENT**: changed loading procedure of languages in wai lang plugin from AJAX to require.js
+- **BUG**: resolved issue with opening the sidebar when clicking on table WAI button.
 
 ## 0.20.22 - 2012/08/16
 
