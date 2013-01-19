@@ -230,7 +230,7 @@
     //is specified, i18n resources will not be inlined. Only one locale
     //can be inlined for a build. Root bundles referenced by a build layer
     //will be included in a build layer regardless of locale being set.
-    //locale: "en-us",
+    locale: "en-us",
 
     //How to optimize all the JS files in the build output directory.
     //Right now only the following values
@@ -273,7 +273,7 @@
     //returns.  (r.js 1.0.8+)
     //- "standard.keepComments.keepLines": keeps the file comments and line
     //returns. (r.js 1.0.8+)
-    optimizeCss: "none",//"standard.keepLines",
+    optimizeCss: "standard",
 
     //If optimizeCss is in use, a list of of files to ignore for the @import
     //inlining. The value of this option should be a comma separated list
@@ -417,14 +417,14 @@
 				// all common plugins
 				"ui/ui-plugin",
 				"link/link-plugin",
-				"table/table-plugin",
+				//"table/table-plugin",
 				"format/format-plugin",
 				"list/list-plugin",
 				"image/image-plugin",
 				"highlighteditables/highlighteditables-plugin",
-				"dom-to-xhtml/dom-to-xhtml-plugin",
+				//"dom-to-xhtml/dom-to-xhtml-plugin",
 				"contenthandler/contenthandler-plugin",
-				"characterpicker/characterpicker-plugin",
+				//"characterpicker/characterpicker-plugin",
 				"commands/commands-plugin",
 				"block/block-plugin",
 				"align/align-plugin",
